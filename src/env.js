@@ -12,11 +12,15 @@ export const env = createEnv({
       .url()
       .refine(
         (str) => !str.includes("YOUR_MYSQL_URL_HERE"),
-        "You forgot to change the default URL"
+        "You forgot to change the default URL",
       ),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    S1C_CONF_HOST: z.string().url(),
+    S1C_EXT_PATH: z.string().default("/student-portal"),
+    S1C_CONF_USERNAME: z.string(),
+    S1C_CONF_PASSWORD: z.string(),
   },
 
   /**
@@ -35,6 +39,11 @@ export const env = createEnv({
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
     NODE_ENV: process.env.NODE_ENV,
+    S1C_CONF_HOST: process.env.S1C_CONF_HOST,
+    S1C_EXT_PATH: process.env.S1C_EXT_PATH,
+    S1C_CONF_USERNAME: process.env.S1C_CONF_USERNAME,
+    S1C_CONF_PASSWORD: process.env.S1C_CONF_PASSWORD,
+
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
