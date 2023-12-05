@@ -6,11 +6,12 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
+import { TRPCError, initTRPC } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { db } from "@/server/db";
+import auth from "../auth";
 
 /**
  * 1. CONTEXT
@@ -25,7 +26,9 @@ import { db } from "@/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  const session = await auth();
   return {
+    session,
     db,
     ...opts,
   };
@@ -74,3 +77,70 @@ export const createTRPCRouter = t.router;
  * are logged in.
  */
 export const publicProcedure = t.procedure;
+
+/** Reusable middleware that enforces users are logged in before running the procedure. */
+const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.session) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+  return next({
+    ctx: {
+      // infers the `session` as non-nullable
+      session: { ...ctx.session },
+    },
+  });
+});
+
+/**
+ * Protected (authenticated) procedure
+ *
+ * If you want a query or mutation to ONLY be accessible to logged in users, use this. It verifies
+ * the session is valid and guarantees `ctx.session` is not null.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
+
+/** Reusable middleware that enforces user is student before running the procedure. */
+const enforceUserIsStudent = enforceUserIsAuthed.unstable_pipe(
+  ({ ctx, next }) => {
+    if (!("student" in ctx.session)) throw new TRPCError({ code: "FORBIDDEN" });
+    return next({
+      ctx: {
+        session: { ...ctx.session },
+      },
+    });
+  },
+);
+
+/**
+ * Protected (authenticated) procedure that is accessible only to students
+ *
+ * If you want a query or mutation to ONLY be accessible to students, use this. It verifies
+ * the session is valid and guarantees `ctx.session.student` is not null.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const studentProcedure = t.procedure.use(enforceUserIsStudent);
+
+/** Reusable middleware that enforces user is admin before running the procedure. */
+const enforceUserIsAdmin = enforceUserIsAuthed.unstable_pipe(
+  ({ ctx, next }) => {
+    if (!("admin" in ctx.session)) throw new TRPCError({ code: "FORBIDDEN" });
+    return next({
+      ctx: {
+        session: { ...ctx.session },
+      },
+    });
+  },
+);
+
+/**
+ * Protected (authenticated) procedure that is accessible only to admins
+ *
+ * If you want a query or mutation to ONLY be accessible to admins, use this. It verifies
+ * the session is valid and guarantees `ctx.session.admin` is not null.
+ *
+ * @see https://trpc.io/docs/procedures
+ */
+export const adminProcedure = t.procedure.use(enforceUserIsAdmin);
