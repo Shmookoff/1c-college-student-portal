@@ -26,10 +26,10 @@ const refresh = async (refreshToken: string) => {
     ];
 
     return { setCookies };
-  } catch {}
+  } catch (err) {}
 };
 
-const auth: Middleware = async (request) => {
+const authMiddleware: Middleware = async (request) => {
   const skipUrlsMatches = skipUrls.map((url) =>
     request.nextUrl.pathname.startsWith(url),
   );
@@ -41,4 +41,4 @@ const auth: Middleware = async (request) => {
   if (!accessToken && refreshToken) return await refresh(refreshToken.value);
 };
 
-export default auth;
+export default authMiddleware;

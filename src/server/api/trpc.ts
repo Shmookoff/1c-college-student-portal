@@ -12,6 +12,7 @@ import { ZodError } from "zod";
 
 import { db } from "@/server/db";
 import auth from "../auth";
+import { cookies } from "next/headers";
 
 /**
  * 1. CONTEXT
@@ -31,6 +32,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     session,
     db,
     ...opts,
+    setCookie: cookies().set,
   };
 };
 
